@@ -958,7 +958,7 @@ def main(
         source = source + scriptpath + " had git hash " + scriptgithash + scriptgitMod
         source = (
             source
-            + ". To obtain the grid generating code do: git clone  https://github.com/nikizadehgfdl/grid_generation.git ; cd grid_generation;  git checkout "
+            + ". To obtain the grid generating code do: git clone https://github.com/ACCESS-NRI/ocean_model_grid_generator ;  git checkout "
             + scriptgithash
         )
 
@@ -969,7 +969,7 @@ def main(
     refineS = 2  # factor 2 is for supergrid
     refineR = degree_resolution_inverse
     lenlon = 360  # global longitude range
-    lon0 = -300.0  # Starting longitude of the map
+    lon0 = -280.0  # Starting longitude of the map
     
     Ni = int(refineR * refineS * lenlon) #Nominal zonal resolution at the equator
 
@@ -1077,7 +1077,7 @@ def main(
     ###
     ###Southern Ocean grid
     ###
-    lat0_SO = -78.0  # Starting lower lat of Southern Ocean grid
+    lat0_SO = -81.0  # Starting lower lat of Southern Ocean grid
     if south_ocean_lower_lat > -90:
         lat0_SO = south_ocean_lower_lat
     latUp_SO = phiMerc[0, Ni // 4]
