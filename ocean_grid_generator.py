@@ -1077,7 +1077,7 @@ def main(
     ###
     ###Southern Ocean grid
     ###
-    lat0_SO = -81.0  # Starting lower lat of Southern Ocean grid
+    lat0_SO = -78.0  # Starting lower lat of Southern Ocean grid
     if south_ocean_lower_lat > -90:
         lat0_SO = south_ocean_lower_lat
     latUp_SO = phiMerc[0, Ni // 4]
