@@ -858,6 +858,7 @@ def main(
     r_dp=0.0,
     lon_dp=80.0,
     lat_dp=-99.0,
+    lower_lon = -280.0,
     exfracdp=None,
     south_cutoff_row=0,
     south_cutoff_ang=-90.0,
@@ -969,8 +970,8 @@ def main(
     refineS = 2  # factor 2 is for supergrid
     refineR = degree_resolution_inverse
     lenlon = 360  # global longitude range
-    lon0 = -280.0  # Starting longitude of the map
-    
+    lon0 = lower_lon # Starting longitude of the map
+
     Ni = int(refineR * refineS * lenlon) #Nominal zonal resolution at the equator
 
     ###
@@ -1470,6 +1471,9 @@ if __name__ == "__main__":
     parser.add_argument("--lat_dp",type=float,required=False,default=-99.0,
                         help="latitude of the displaced south pole, do not specify both r_dp and lat_dp!")
 
+    parser.add_argument("--lower-lon",type=float,required=False,default=-280.0,
+                        help="Starting longitude of the map")
+                        
     parser.add_argument("--south_cutoff_ang",type=float,required=False,default=-90.0,
                         help="degrees south to start")
 
