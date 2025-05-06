@@ -792,33 +792,51 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     nxp = nx + 1
     print("   Writing netcdf file with ny,nx= ", ny, nx)
 
+    x_float32 = x.astype(np.float32)
+    x_float64 = x_float32.astype(np.float64)
+
+    y_float32 = y.astype(np.float32)
+    y_float64 = y_float32.astype(np.float64)
+
+    dy_float32 = dy.astype(np.float32)
+    dy_float64 = dy_float32.astype(np.float64)
+
+    dx_float32 = dx.astype(np.float32)
+    dx_float64 = dx_float32.astype(np.float64)
+
+    area_float32 = area.astype(np.float32)
+    area_float64 = area_float32.astype(np.float64)
+
+    angle_dx_float32 = angle_dx.astype(np.float32)
+    angle_dx_float64 = angle_dx_float32.astype(np.float64)
+
     nyp = fout.createDimension("nyp", nyp)
     nxp = fout.createDimension("nxp", nxp)
     ny = fout.createDimension("ny", ny)
     nx = fout.createDimension("nx", nx)
     string = fout.createDimension("string", 255)
     tile = fout.createVariable("tile", "S1", ("string"))
-    yv = fout.createVariable("y", "f8", ("nyp", "nxp"))
-    xv = fout.createVariable("x", "f8", ("nyp", "nxp"))
+    yv = fout.createVariable("y_float64", "f8", ("nyp", "nxp"))
+    xv = fout.createVariable("x_float64", "f8", ("nyp", "nxp"))
     yv.units = "degrees"
     xv.units = "degrees"
-    yv[:] = y
-    xv[:] = x
+    yv[:] = y_float64
+    xv[:] = x_float64
     stringvals = np.empty(1, "S" + repr(len(tile)))
     stringvals[0] = "tile1"
     tile[:] = nc.stringtochar(stringvals)
-    dyv = fout.createVariable("dy", "f8", ("ny", "nxp"))
+    dyv = fout.createVariable("dy_float64", "f8", ("ny", "nxp"))
     dyv.units = "meters"
-    dyv[:] = dy
-    dxv = fout.createVariable("dx", "f8", ("nyp", "nx"))
+    dyv[:] = dy_float64
+    dxv = fout.createVariable("dx_float64", "f8", ("nyp", "nx"))
     dxv.units = "meters"
-    dxv[:] = dx
-    areav = fout.createVariable("area", "f8", ("ny", "nx"))
+    dxv[:] = dx_float64
+    areav = fout.createVariable("area_float64", "f8", ("ny", "nx"))
     areav.units = "m2"
-    areav[:] = area
-    anglev = fout.createVariable("angle_dx", "f8", ("nyp", "nxp"))
+    areav[:] = area_float64
+    anglev = fout.createVariable("angle_dx_float64", "f8", ("nyp", "nxp"))
     anglev.units = "degrees"
-    anglev[:] = angle_dx
+    anglev[:] = angle_dx_float64
     # global attributes
     if not no_changing_meta:
         fout.history = history
