@@ -29,6 +29,11 @@ def chksum(x, lbl):
     print(hashlib.sha256(y).hexdigest(),"%10s" % lbl,
         "min = %.15f" % ymin,"max = %.15f" % ymax,"mean = %.15f" % ymean,"sd = %.15f" % ysd)
 
+def convert_precision(arr):
+    """Implements single precision quantization"""
+    arr_float32 = arr.astype(np.float32)
+    arr_float64 = arr_float32.astype(np.float64)
+    return arr_float64
 
 def bipolar_projection(lamg, phig, lon_bp, rp, metrics_only=False):
     """Makes a stereographic bipolar projection of the input coordinate mesh (lamg,phig)
@@ -791,24 +796,13 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     nyp = ny + 1
     nxp = nx + 1
     print("   Writing netcdf file with ny,nx= ", ny, nx)
-
-    x_float32 = x.astype(np.float32)
-    x_float64 = x_float32.astype(np.float64)
-
-    y_float32 = y.astype(np.float32)
-    y_float64 = y_float32.astype(np.float64)
-
-    dy_float32 = dy.astype(np.float32)
-    dy_float64 = dy_float32.astype(np.float64)
-
-    dx_float32 = dx.astype(np.float32)
-    dx_float64 = dx_float32.astype(np.float64)
-
-    area_float32 = area.astype(np.float32)
-    area_float64 = area_float32.astype(np.float64)
-
-    angle_dx_float32 = angle_dx.astype(np.float32)
-    angle_dx_float64 = angle_dx_float32.astype(np.float64)
+    
+    x_float64 = convert_precision(x)
+    y_float64 = convert_precision(y)
+    dy_float64 = convert_precision(dy)
+    dx_float64 = convert_precision(dx)
+    area_float64 = convert_precision(area)
+    angle_dx_float64 = convert_precision(angle_dx)
 
     nyp = fout.createDimension("nyp", nyp)
     nxp = fout.createDimension("nxp", nxp)
@@ -816,8 +810,8 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     nx = fout.createDimension("nx", nx)
     string = fout.createDimension("string", 255)
     tile = fout.createVariable("tile", "S1", ("string"))
-    yv = fout.createVariable("y_float64", "f8", ("nyp", "nxp"))
-    xv = fout.createVariable("x_float64", "f8", ("nyp", "nxp"))
+    yv = fout.createVariable("y", "f8", ("nyp", "nxp"))
+    xv = fout.createVariable("x", "f8", ("nyp", "nxp"))
     yv.units = "degrees"
     xv.units = "degrees"
     yv[:] = y_float64
@@ -825,16 +819,16 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     stringvals = np.empty(1, "S" + repr(len(tile)))
     stringvals[0] = "tile1"
     tile[:] = nc.stringtochar(stringvals)
-    dyv = fout.createVariable("dy_float64", "f8", ("ny", "nxp"))
+    dyv = fout.createVariable("dy", "f8", ("ny", "nxp"))
     dyv.units = "meters"
     dyv[:] = dy_float64
-    dxv = fout.createVariable("dx_float64", "f8", ("nyp", "nx"))
+    dxv = fout.createVariable("dx", "f8", ("nyp", "nx"))
     dxv.units = "meters"
     dxv[:] = dx_float64
-    areav = fout.createVariable("area_float64", "f8", ("ny", "nx"))
+    areav = fout.createVariable("area", "f8", ("ny", "nx"))
     areav.units = "m2"
     areav[:] = area_float64
-    anglev = fout.createVariable("angle_dx_float64", "f8", ("nyp", "nxp"))
+    anglev = fout.createVariable("angle", "f8", ("nyp", "nxp"))
     anglev.units = "degrees"
     anglev[:] = angle_dx_float64
     # global attributes
