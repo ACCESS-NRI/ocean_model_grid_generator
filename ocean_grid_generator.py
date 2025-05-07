@@ -828,7 +828,7 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     areav = fout.createVariable("area", "f8", ("ny", "nx"))
     areav.units = "m2"
     areav[:] = area_float64
-    anglev = fout.createVariable("angle", "f8", ("nyp", "nxp"))
+    anglev = fout.createVariable("angle_dx", "f8", ("nyp", "nxp"))
     anglev.units = "degrees"
     anglev[:] = angle_dx_float64
     # global attributes
