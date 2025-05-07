@@ -29,6 +29,11 @@ def chksum(x, lbl):
     print(hashlib.sha256(y).hexdigest(),"%10s" % lbl,
         "min = %.15f" % ymin,"max = %.15f" % ymax,"mean = %.15f" % ymean,"sd = %.15f" % ysd)
 
+def convert_precision(arr):
+    """Implements single precision quantization"""
+    arr_float32 = arr.astype(np.float32)
+    arr_float64 = arr_float32.astype(np.float64)
+    return arr_float64
 
 def bipolar_projection(lamg, phig, lon_bp, rp, metrics_only=False):
     """Makes a stereographic bipolar projection of the input coordinate mesh (lamg,phig)
@@ -791,6 +796,13 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     nyp = ny + 1
     nxp = nx + 1
     print("   Writing netcdf file with ny,nx= ", ny, nx)
+    
+    x_float64 = convert_precision(x)
+    y_float64 = convert_precision(y)
+    dy_float64 = convert_precision(dy)
+    dx_float64 = convert_precision(dx)
+    area_float64 = convert_precision(area)
+    angle_dx_float64 = convert_precision(angle_dx)
 
     nyp = fout.createDimension("nyp", nyp)
     nxp = fout.createDimension("nxp", nxp)
@@ -802,23 +814,23 @@ def write_nc(x,y,dx,dy,area,angle_dx,axis_units="degrees",fnam=None,format="NETC
     xv = fout.createVariable("x", "f8", ("nyp", "nxp"))
     yv.units = "degrees"
     xv.units = "degrees"
-    yv[:] = y
-    xv[:] = x
+    yv[:] = y_float64
+    xv[:] = x_float64
     stringvals = np.empty(1, "S" + repr(len(tile)))
     stringvals[0] = "tile1"
     tile[:] = nc.stringtochar(stringvals)
     dyv = fout.createVariable("dy", "f8", ("ny", "nxp"))
     dyv.units = "meters"
-    dyv[:] = dy
+    dyv[:] = dy_float64
     dxv = fout.createVariable("dx", "f8", ("nyp", "nx"))
     dxv.units = "meters"
-    dxv[:] = dx
+    dxv[:] = dx_float64
     areav = fout.createVariable("area", "f8", ("ny", "nx"))
     areav.units = "m2"
-    areav[:] = area
+    areav[:] = area_float64
     anglev = fout.createVariable("angle_dx", "f8", ("nyp", "nxp"))
     anglev.units = "degrees"
-    anglev[:] = angle_dx
+    anglev[:] = angle_dx_float64
     # global attributes
     if not no_changing_meta:
         fout.history = history
