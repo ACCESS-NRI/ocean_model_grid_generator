@@ -858,33 +858,6 @@ def generate_latlon_grid(lni, lnj, llon0, llen_lon, llat0, llen_lat, ensure_nj_e
     return llamSP, lphiSP
 
 
-def next_composite_number(n, *, min_n=120, max_n=4000, divisor=12):
-    """
-    Find the next composite number >= n from a precomputed list of
-    numbers between min_n and max_n that are divisible by `divisor`.
-    """
-    def get_divisors(k):
-        divisors = set()
-        for i in range(1, int(k**0.5)+1):
-            if k % i == 0:
-                divisors.add(i)
-                divisors.add(k//i)
-        return sorted(divisors)
-
-    cs = [(val, get_divisors(val)) for val in range(min_n, max_n+1, divisor)]
-
-    for val, divisors in cs:
-        if val >= n:
-            pad = val - n
-            if pad > divisor:
-                raise ValueError(f"Target NY is too small ({n} << {min_n}) for the pad list "
-                                    f"(padding = {pad}) - please extend the table.")
-            print(f"Selected NYGLOBAL = {val}")
-            print(f"Divisors of {val}: {divisors}")
-            return val
-
-    raise ValueError(f"Target NY is too large ({n} >> {max_n}) for the pad list - please extend the table!")
-
 def usage():
     print(
         "ocean_grid_generator.py -f <output_grid_filename> -r <inverse_degrees_resolution> [--rdp=<displacement_factor/0.2> --exfracdp=0.5 --south_cutoff_ang=<degrees_south_to_start> --south_cutoff_row=<rows_south_to_cut> --match_dy bp so --even_j --plot --write_subgrid_files --enhanced_equatorial --no-metrics --grids=sc]"
@@ -1479,21 +1452,26 @@ def main(
     if target_ny > 0:
         ny_super = y3.shape[0] - 1
         target_ny_super = 2 * target_ny
-        target = next_composite_number(max(target_ny_super, ny_super))
-        n_extra = target - ny_super
+        n_extra = target_ny_super - ny_super
 
         if n_extra <=0:
             raise ValueError(
                 f"--target_ny ({target_ny}) <= current NYGLOBAL ({ny_super//2}); "
-                "nothing to pad - drop the '--target_ny' option or increase the value."
+                f"nothing to pad - drop the '--target_ny' option or increase the 'target_ny' beyond {ny_super//2}."
             )
 
-        print(f"Padding south: NY {ny_super} -> {target} (adding {n_extra//2} rows!)")
+        print(f"Padding south: NY {ny_super} -> {target_ny_super} (adding {n_extra} rows to the supergrid!)")
 
         dy_s = y3[1,0] - y3[0,0]
         pad_y = np.zeros((n_extra, y3.shape[1]))
         for i in range(n_extra):
-            pad_y[i,:] = y3[0,:] - (i+1)*dy_s
+            tmp_pad = y3[0,:] - (i+1)*dy_s
+            if np.any(tmp_pad < -90):
+                raise ValueError(
+                    f"South padding exceeds lat -90 deg at row {i}."
+                    "Try reducing target_ny or check the base grid spacing."
+                )
+            pad_y[i,:] = tmp_pad
 
         pad_x = np.tile(x3[0,:], (n_extra,1))
 
@@ -1511,7 +1489,7 @@ def main(
         area3 = np.concatenate((pad_area, area3), axis=0)
         angle3 = np.concatenate((pad_ang, angle3), axis=0)
 
-        desc = (desc+ f"South-padded with {n_extra//2} ghost land rows (final NY={target}).")
+        desc = (desc+ f" south-padded with {n_extra//2} ghost land rows (final NYGLOBAL={target_ny_super//2}).")
 
     print( "shapes: ", x3.shape, y3.shape, dx3.shape, dy3.shape, area3.shape, angle3.shape)
     write_nc(x3, y3, dx3, dy3, area3, angle3, axis_units="degrees", fnam=gridfilename, description=desc, history=hist,
@@ -1605,7 +1583,11 @@ if __name__ == "__main__":
                         help="specify the subgrids to generate, choices are bipolar, mercator, so, sc, all. Default is all")
 
     parser.add_argument("--target_ny",type=int,required=False,default="0",
-                        help="After grid is assembled, pad extra 'ghost' rows at south, so NYGLOBAL equals the chosen highly-composite number.")
+                        help=(
+                            "Request NYGLOBAL to be this value."
+                            "These padded rows use the grid metrics (x, dx, dy, area, angle) of the southernmost existing row."
+                            )
+                        )
 
     args = vars(parser.parse_args())
     main(**args)
