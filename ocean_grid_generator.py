@@ -891,6 +891,7 @@ def main(
     south_ocean_lower_lat=-99.0,
     south_ocean_upper_lat=-99.0,
     no_south_cap=False,
+    target_ny=0,
 ):
 
     known_options=["bp", "so", "p125sc", ""]
@@ -1448,6 +1449,71 @@ def main(
     if y3.shape[0] % 2 == 0:
         raise Exception("Ooops: The number of j's in the supergrid is not even. Use option --south_cutoff_row to one more or on less row from south.")
 
+    # south-pad, so NYGLOBAL hits a highly composite number
+    def next_composite_number(n, *, min_n=120, max_n=4000, divisor=12):
+        """
+        Find the next composite number >= n from a precomputed list of
+        numbers between min_n and max_n that are divisible by `divisor`.
+        """
+        def get_divisors(k):
+            divisors = set()
+            for i in range(1, int(k**0.5)+1):
+                if k % i == 0:
+                    divisors.add(i)
+                    divisors.add(k//i)
+            return sorted(divisors)
+
+        cs = [(val, get_divisors(val)) for val in range(min_n, max_n+1, divisor)]
+
+        for val, divisors in cs:
+            if val >= n:
+                pad = val - n
+                if pad > divisor:
+                    raise ValueError(f"Target NY is too small ({n} << {min_n}) for the pad list "
+                                     f"(padding = {pad}) - please extend the table.")
+                print(f"Selected NYGLOBAL = {val}")
+                print(f"Divisors of {val}: {divisors}")
+                return val
+
+        raise ValueError(f"Target NY is too large ({n} >> {max_n}) for the pad list - please extend the table!")
+
+    if target_ny > 0:
+        ny_super = y3.shape[0] - 1
+        target_ny_super = 2 * target_ny
+        target = next_composite_number(max(target_ny_super, ny_super))
+        n_extra = target - ny_super
+
+        if n_extra <=0:
+            raise ValueError(
+                f"--target_ny ({target_ny}) <= current NYGLOBAL ({ny_super//2}); "
+                "nothing to pad - drop the '--target_ny' option or increase the value."
+            )
+
+        print(f"Padding south: NY {ny_super} -> {target} (adding {n_extra//2} rows!)")
+
+        dy_s = y3[1,0] - y3[0,0]
+        pad_y = np.zeros((n_extra, y3.shape[1]))
+        for i in range(n_extra):
+            pad_y[i,:] = y3[0,:] - (i+1)*dy_s
+
+        pad_x = np.tile(x3[0,:], (n_extra,1))
+
+        # copy real metric values of the first row
+        pad_dx = dx3[0:1,:].repeat(n_extra, axis=0)
+        pad_dy = dy3[0:1,:].repeat(n_extra, axis=0)
+        pad_area = area3[0:1,:].repeat(n_extra, axis=0)
+        pad_ang = angle3[0:1,:].repeat(n_extra, axis=0)
+
+        # stitch at south
+        x3 = np.concatenate((pad_x, x3), axis=0)
+        y3 = np.concatenate((pad_y, y3), axis=0)
+        dx3 = np.concatenate((pad_dx, dx3), axis=0)
+        dy3 = np.concatenate((pad_dy, dy3), axis=0)
+        area3 = np.concatenate((pad_area, area3), axis=0)
+        angle3 = np.concatenate((pad_ang, angle3), axis=0)
+
+        desc = (desc+ f"South-padded with {n_extra//2} ghost land rows (final NY={target}).")
+
     print( "shapes: ", x3.shape, y3.shape, dx3.shape, dy3.shape, area3.shape, angle3.shape)
     write_nc(x3, y3, dx3, dy3, area3, angle3, axis_units="degrees", fnam=gridfilename, description=desc, history=hist,
                    source=source, no_changing_meta=no_changing_meta, debug=debug )
@@ -1538,6 +1604,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--grids",type=str,nargs="+",required=False,default="all",
                         help="specify the subgrids to generate, choices are bipolar, mercator, so, sc, all. Default is all")
+
+    parser.add_argument("--target_ny",type=int,required=False,default="0",
+                        help="After grid is assembled, pad extra 'ghost' rows at south, so NYGLOBAL equals the chosen highly-composite number.")
 
     args = vars(parser.parse_args())
     main(**args)
