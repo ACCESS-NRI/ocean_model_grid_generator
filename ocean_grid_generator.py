@@ -858,6 +858,33 @@ def generate_latlon_grid(lni, lnj, llon0, llen_lon, llat0, llen_lat, ensure_nj_e
     return llamSP, lphiSP
 
 
+def next_composite_number(n, *, min_n=120, max_n=4000, divisor=12):
+    """
+    Find the next composite number >= n from a precomputed list of
+    numbers between min_n and max_n that are divisible by `divisor`.
+    """
+    def get_divisors(k):
+        divisors = set()
+        for i in range(1, int(k**0.5)+1):
+            if k % i == 0:
+                divisors.add(i)
+                divisors.add(k//i)
+        return sorted(divisors)
+
+    cs = [(val, get_divisors(val)) for val in range(min_n, max_n+1, divisor)]
+
+    for val, divisors in cs:
+        if val >= n:
+            pad = val - n
+            if pad > divisor:
+                raise ValueError(f"Target NY is too small ({n} << {min_n}) for the pad list "
+                                    f"(padding = {pad}) - please extend the table.")
+            print(f"Selected NYGLOBAL = {val}")
+            print(f"Divisors of {val}: {divisors}")
+            return val
+
+    raise ValueError(f"Target NY is too large ({n} >> {max_n}) for the pad list - please extend the table!")
+
 def usage():
     print(
         "ocean_grid_generator.py -f <output_grid_filename> -r <inverse_degrees_resolution> [--rdp=<displacement_factor/0.2> --exfracdp=0.5 --south_cutoff_ang=<degrees_south_to_start> --south_cutoff_row=<rows_south_to_cut> --match_dy bp so --even_j --plot --write_subgrid_files --enhanced_equatorial --no-metrics --grids=sc]"
@@ -1448,34 +1475,6 @@ def main(
         raise Exception( "Ooops: Equator is not going to be a u-point. Use option --south_cutoff_row to one more or on less row from south.")
     if y3.shape[0] % 2 == 0:
         raise Exception("Ooops: The number of j's in the supergrid is not even. Use option --south_cutoff_row to one more or on less row from south.")
-
-    # south-pad, so NYGLOBAL hits a highly composite number
-    def next_composite_number(n, *, min_n=120, max_n=4000, divisor=12):
-        """
-        Find the next composite number >= n from a precomputed list of
-        numbers between min_n and max_n that are divisible by `divisor`.
-        """
-        def get_divisors(k):
-            divisors = set()
-            for i in range(1, int(k**0.5)+1):
-                if k % i == 0:
-                    divisors.add(i)
-                    divisors.add(k//i)
-            return sorted(divisors)
-
-        cs = [(val, get_divisors(val)) for val in range(min_n, max_n+1, divisor)]
-
-        for val, divisors in cs:
-            if val >= n:
-                pad = val - n
-                if pad > divisor:
-                    raise ValueError(f"Target NY is too small ({n} << {min_n}) for the pad list "
-                                     f"(padding = {pad}) - please extend the table.")
-                print(f"Selected NYGLOBAL = {val}")
-                print(f"Divisors of {val}: {divisors}")
-                return val
-
-        raise ValueError(f"Target NY is too large ({n} >> {max_n}) for the pad list - please extend the table!")
 
     if target_ny > 0:
         ny_super = y3.shape[0] - 1
