@@ -891,7 +891,7 @@ def main(
     south_ocean_lower_lat=-99.0,
     south_ocean_upper_lat=-99.0,
     no_south_cap=False,
-    target_ny=0,
+    target_ny=None,
 ):
 
     known_options=["bp", "so", "p125sc", ""]
@@ -1449,7 +1449,7 @@ def main(
     if y3.shape[0] % 2 == 0:
         raise Exception("Ooops: The number of j's in the supergrid is not even. Use option --south_cutoff_row to one more or on less row from south.")
 
-    if target_ny > 0:
+    if target_ny is not None and target_ny > 0:
         ny_super = y3.shape[0] - 1
         target_ny_super = 2 * target_ny
         n_extra = target_ny_super - ny_super
@@ -1468,7 +1468,7 @@ def main(
             tmp_pad = y3[0,:] - (i+1)*dy_s
             if np.any(tmp_pad < -90):
                 raise ValueError(
-                    f"South padding exceeds lat -90 deg at row {i}."
+                    f"South padding goes below lat -90 deg at row {i}."
                     "Try reducing target_ny or check the base grid spacing."
                 )
             pad_y[i,:] = tmp_pad
@@ -1582,7 +1582,7 @@ if __name__ == "__main__":
     parser.add_argument("--grids",type=str,nargs="+",required=False,default="all",
                         help="specify the subgrids to generate, choices are bipolar, mercator, so, sc, all. Default is all")
 
-    parser.add_argument("--target_ny",type=int,required=False,default="0",
+    parser.add_argument("--target_ny",type=int,required=False,default=None,
                         help=(
                             "Request NYGLOBAL to be this value."
                             "These padded rows use the grid metrics (x, dx, dy, area, angle) of the southernmost existing row."
