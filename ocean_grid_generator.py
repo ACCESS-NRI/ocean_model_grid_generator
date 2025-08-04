@@ -891,6 +891,7 @@ def main(
     south_ocean_lower_lat=-99.0,
     south_ocean_upper_lat=-99.0,
     no_south_cap=False,
+    target_ny=None,
 ):
 
     known_options=["bp", "so", "p125sc", ""]
@@ -1448,6 +1449,48 @@ def main(
     if y3.shape[0] % 2 == 0:
         raise Exception("Ooops: The number of j's in the supergrid is not even. Use option --south_cutoff_row to one more or on less row from south.")
 
+    if target_ny is not None and target_ny > 0:
+        ny_super = y3.shape[0] - 1
+        target_ny_super = 2 * target_ny
+        n_extra = target_ny_super - ny_super
+
+        if n_extra <=0:
+            raise ValueError(
+                f"--target_ny ({target_ny}) <= current NYGLOBAL ({ny_super//2}); "
+                f"nothing to pad - drop the '--target_ny' option or increase the 'target_ny' beyond {ny_super//2}."
+            )
+
+        print(f"Padding south: NY {ny_super} -> {target_ny_super} (adding {n_extra} rows to the supergrid!)")
+
+        dy_s = y3[1,0] - y3[0,0]
+        pad_y = np.zeros((n_extra, y3.shape[1]))
+        for i in range(n_extra):
+            tmp_pad = y3[0,:] - (i+1)*dy_s
+            if np.any(tmp_pad < -90):
+                raise ValueError(
+                    f"South padding goes below lat -90 deg at row {i}."
+                    "Try reducing target_ny or check the base grid spacing."
+                )
+            pad_y[i,:] = tmp_pad
+
+        pad_x = np.tile(x3[0,:], (n_extra,1))
+
+        # copy real metric values of the first row
+        pad_dx = dx3[0:1,:].repeat(n_extra, axis=0)
+        pad_dy = dy3[0:1,:].repeat(n_extra, axis=0)
+        pad_area = area3[0:1,:].repeat(n_extra, axis=0)
+        pad_ang = angle3[0:1,:].repeat(n_extra, axis=0)
+
+        # stitch at south
+        x3 = np.concatenate((pad_x, x3), axis=0)
+        y3 = np.concatenate((pad_y, y3), axis=0)
+        dx3 = np.concatenate((pad_dx, dx3), axis=0)
+        dy3 = np.concatenate((pad_dy, dy3), axis=0)
+        area3 = np.concatenate((pad_area, area3), axis=0)
+        angle3 = np.concatenate((pad_ang, angle3), axis=0)
+
+        desc = (desc+ f" south-padded with {n_extra//2} ghost land rows (final NYGLOBAL={target_ny_super//2}).")
+
     print( "shapes: ", x3.shape, y3.shape, dx3.shape, dy3.shape, area3.shape, angle3.shape)
     write_nc(x3, y3, dx3, dy3, area3, angle3, axis_units="degrees", fnam=gridfilename, description=desc, history=hist,
                    source=source, no_changing_meta=no_changing_meta, debug=debug )
@@ -1538,6 +1581,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--grids",type=str,nargs="+",required=False,default="all",
                         help="specify the subgrids to generate, choices are bipolar, mercator, so, sc, all. Default is all")
+
+    parser.add_argument("--target_ny",type=int,required=False,default=None,
+                        help=(
+                            "Request NYGLOBAL to be this value."
+                            "These padded rows use the grid metrics (x, dx, dy, area, angle) of the southernmost existing row."
+                            )
+                        )
 
     args = vars(parser.parse_args())
     main(**args)
