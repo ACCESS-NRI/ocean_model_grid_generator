@@ -1465,7 +1465,7 @@ def main(
         dy_s = y3[1,0] - y3[0,0]
         pad_y = np.zeros((n_extra, y3.shape[1]))
         for i in range(n_extra):
-            tmp_pad = y3[0,:] - (i+1)*dy_s
+            tmp_pad = y3[0,:] - (n_extra - i)*dy_s
             if np.any(tmp_pad < -90):
                 raise ValueError(
                     f"South padding goes below lat -90 deg at row {i}."
