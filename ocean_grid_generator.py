@@ -8,6 +8,7 @@ import numpy
 import argparse
 import sys, getopt
 import datetime, os, subprocess
+from warnings import warn
 
 # Constants
 PI_180 = np.pi / 180.0
@@ -1050,7 +1051,13 @@ def main(
         lon_bp = lon0  # longitude of the bipole(s)
         #Optionally override from arguments
         if bipolar_lower_lat > -90:
-             lat0_bp = bipolar_lower_lat
+            warn(
+                """Using non-default bipolar_lower_lat. 
+                This overrides the boundary between mercator and bipolar regions and leads to inconsistencies in dy and grid areas.
+                """,
+                UserWarning
+                )
+            lat0_bp = bipolar_lower_lat
 
         # To get the same number of points as existing 1/2 and 1/4 degree grids that were generated with MIDAS
         Nj_ncap = int(60 * refineR * refineS)
@@ -1536,7 +1543,7 @@ if __name__ == "__main__":
                         help="rows to cut from the grid at south")
 
     parser.add_argument("--bipolar_lower_lat",type=float,required=False,default=-90.0,
-                        help="starting (lower) latitude of Northern Bipolar sub grid")
+                        help="override starting (lower) latitude of Northern Bipolar sub grid. Generally this argument shouldn't be used and a default based on mercator_upper_lat will be generated internally.")
 
     parser.add_argument("--mercator_lower_lat",type=float,required=False,default=-90.0,
                         help="starting (lower) latitude of Mercator sub grid")
