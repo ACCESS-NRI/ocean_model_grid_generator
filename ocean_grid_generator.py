@@ -893,6 +893,7 @@ def main(
     south_ocean_upper_lat=-99.0,
     no_south_cap=False,
     target_ny=None,
+    nj_ncap=None,
 ):
 
     known_options=["bp", "so", "p125sc", ""]
@@ -1076,6 +1077,15 @@ def main(
             # behavior for middle points.
             # Note that int(0.5+x) is equivalent to math.floor(0.5+x)
             Nj_ncap = int(0.5 + (90.0 - lat0_bp) / DeltaPhiMerc_no)  # Impose boundary condition for smooth dy
+
+        # Optionally override the number of bipolar cap supergrid j-cells (applied after match_dy)
+        if nj_ncap is not None:
+            if nj_ncap <= 0:
+                raise ValueError(f"--nj_ncap ({nj_ncap}) must be a positive integer.")
+            if ensure_nj_even and nj_ncap % 2 != 0:
+                raise ValueError(f"--nj_ncap ({nj_ncap}) must be even when --ensure_nj_even is used.")
+            print("   Overriding Nj_ncap", Nj_ncap, "->", nj_ncap)
+            Nj_ncap = nj_ncap
 
         # Generate the bipolar grid
         lamBP, phiBP, dxBP_h, dyBP_h = generate_bipolar_cap_mesh(Ni, Nj_ncap, lat0_bp, lon_bp, ensure_nj_even=ensure_nj_even)
@@ -1427,6 +1437,8 @@ def main(
     if hasBP:
         desc = (desc
             + "a bipolar northern cap north of "+ str(phiMerc[-1, 0])+ " degrees; ")
+        if nj_ncap is not None:
+            desc = desc + "(bipolar cap Nj_ncap overridden to " + str(phiBP.shape[0] - 1) + " supergrid rows) "
     if hasSO:
         desc = (desc+ "a regular lat-lon grid spanning "+ str(latUp_SO)+ " to "+ str(lat0_SO)+ " degrees; ")
     if hasSC:
@@ -1595,6 +1607,9 @@ if __name__ == "__main__":
                             "These padded rows use the grid metrics (x, dx, dy, area, angle) of the southernmost existing row."
                             )
                         )
+
+    parser.add_argument("--nj_ncap",type=int,required=False,default=None,
+                        help="override the number of supergrid j-cells in the northern bipolar cap (applied after --match_dy); must be positive, and even with --ensure_nj_even")
 
     args = vars(parser.parse_args())
     main(**args)
